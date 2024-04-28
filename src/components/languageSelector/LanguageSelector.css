@@ -1,0 +1,10 @@
+.language-selector-antd > .ant-select-selector,
+.language-selector-antd > .ant-select-selector:active {
+  background-color: transparent !important;
+  color: white !important;
+  border: none !important;
+}
+.language-selector-antd > .ant-select-arrow {
+  color: white !important;
+  font-weight: 500;
+}
