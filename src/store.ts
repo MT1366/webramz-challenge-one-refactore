@@ -3,7 +3,7 @@ import { create } from "zustand";
 interface FormData {
   name: string;
   phone: string;
-  // dates: { date: Date; number: number; color: string }[];
+  dates: Date[];
 }
 
 type DateStore = {

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Button, message, Steps, theme } from "antd";
 import MyForm from "./MyForm";
+import ColorPickerComponent from "./ColorPicker";
+// import MyForm from "./MyForm";
 
 const steps = [
   {
@@ -9,7 +11,7 @@ const steps = [
   },
   {
     title: "Second",
-    content: "Second-content",
+    content: <ColorPickerComponent />,
   },
   {
     title: "Last",
@@ -32,7 +34,7 @@ const MainComponent: React.FC = () => {
   const items = steps.map((item) => ({ key: item.title, title: item.title }));
 
   const contentStyle: React.CSSProperties = {
-    lineHeight: "260px",
+    lineHeight: "50px",
     textAlign: "center",
     color: token.colorTextTertiary,
     backgroundColor: token.colorFillAlter,
@@ -42,7 +44,7 @@ const MainComponent: React.FC = () => {
   };
 
   return (
-    <>
+    <main style={{ width: "600px", margin: "0 auto", paddingTop: "80px" }}>
       <Steps current={current} items={items} />
       <div style={contentStyle}>{steps[current].content}</div>
       <div style={{ marginTop: 24 }}>
@@ -65,7 +67,7 @@ const MainComponent: React.FC = () => {
           </Button>
         )}
       </div>
-    </>
+    </main>
   );
 };
 

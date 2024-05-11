@@ -1,5 +1,6 @@
-export type TypeOfFormData = {
-  date: Date | null;
-  number: number;
+export default interface TypeOfFormData {
+  name: string;
+  phone: string;
+  dates: Date[];
   color: string;
-};
+}

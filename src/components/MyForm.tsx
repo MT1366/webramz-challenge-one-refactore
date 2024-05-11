@@ -1,21 +1,14 @@
 import dayjs, { Dayjs } from "dayjs";
-import React, { useEffect, useState } from "react";
-import {
-  Form,
-  Input,
-  DatePicker,
-  Button,
-  InputNumber,
-  Select,
-  message,
-} from "antd";
-import { FormDataType } from "../types/FormDataType";
+import React, { useState } from "react";
+import { Form, Input, DatePicker, Button, Select, message } from "antd";
 import { usePhoneNumberData } from "../Hooks/usePhoneNumberData";
 import useDisabledDate from "../Hooks/useDisableDate";
-import { useDateStore } from "../store";
 import { LanguageSelector } from "./languageSelector/LanguageSelector";
 import { LoginTrans } from "../features/login/LoginTrans";
 import useLanguage from "../context/language/useLanguage";
+import TypeOfFormData from "../types/FormDataType";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createUser } from "../services/posts";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -25,52 +18,78 @@ const MyForm: React.FC = () => {
   const [endDate, setEndDate] = useState<Dayjs | null>(null);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
 
+  console.log("selected Dates:", selectedDates);
+
   const phoneNumbersData = usePhoneNumberData();
   const disabledDate = useDisabledDate(startDate, endDate);
   const { selectedLanguage } = useLanguage();
-  const { formData, submit } = useDateStore();
 
-  const handleFormSubmit = (values: FormDataType) => {
-    const newData = {
+  const queryClient = useQueryClient();
+
+  const createFormMutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["user", {}], data);
+    },
+  });
+
+  const handleFormSubmit = (values: TypeOfFormData) => {
+    createFormMutation.mutate({
       name: values.name,
       phone: values.phone,
-      // dates: values.dailyInputs.map((input: any, index: number) => ({
-      //   date: new Date(selectedDates[index]),
-      //   number: input.number,
-      //   color: input.color,
-      // })),
-    };
-    submit(newData);
+      dates: selectedDates,
+      color: "",
+    });
+
     message.success("Your Data Submitted");
   };
 
-  // const handleFormSubmit = (values: any) => {
-  //   console.log(values);
-  // };
+  const handleRangePickerChange = (
+    dates: [Dayjs | null, Dayjs | null] | null,
+    dateStrings: [string, string]
+  ) => {
+    if (dates && dates.length === 2) {
+      setStartDate(dates[0]);
+      setEndDate(dates[1]);
+      const daysDiff = dates[1]?.diff(dates[0], "day");
+      if (daysDiff && daysDiff > 7) {
+        message.error("Please select a date range within 7 days");
+        console.log("date strings:", dateStrings);
+      }
+    }
+    handleDateChange(dates);
+    createFormMutation.isPending ? <p>Loading</p> : "";
+  };
 
-  useEffect(() => {
-    console.log("zustand store:", formData);
-  }, [formData]);
+  const generatedDateRange = (startDate: Date, endDate: Date) => {
+    const days = [];
+    let currentDate = new Date(startDate);
 
-  // const handleRangePickerChange = (
-  //   dates: [Dayjs | null, Dayjs | null] | null,
-  //   dateStrings: [string, string]
-  // ) => {
-  //   if (dates && dates.length === 2) {
-  //     setStartDate(dates[0]);
-  //     setEndDate(dates[1]);
+    const maxDays = 7;
 
-  //     const daysDiff = dates[1]?.diff(dates[0], "day");
-  //     if (daysDiff && daysDiff > 7) {
-  //       message.error("Please select a date range within 7 days");
-  //     }
-  //   }
-  // };
+    while (currentDate <= endDate && days.length < maxDays) {
+      days.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return days;
+  };
+
+  const handleDateChange = (dates: any) => {
+    if (dates && dates.length === 2) {
+      const [startDate, endDate] = dates;
+      const days = generatedDateRange(startDate, endDate);
+
+      setSelectedDates(days);
+      console.log(days);
+    } else {
+      setSelectedDates([]);
+    }
+  };
 
   return (
-    <div className="">
+    <div className="flex justify-center">
       <Form
-        className="backdrop-blur-lg bg-blue-200 flex flex-col justify-center p-3 m-4 rounded-md"
+        className="backdrop-blur-lg flex flex-col justify-center p-3 m-4 rounded-md"
         onFinish={handleFormSubmit}
         id="myForm"
         autoComplete="true"
@@ -80,6 +99,7 @@ const MyForm: React.FC = () => {
           name="name"
           label={LoginTrans.form.items.emailItem.label[selectedLanguage]}
           rules={[{ required: true, message: "Please enter your name" }]}
+          className="w-96"
         >
           <Input />
         </Form.Item>
@@ -90,6 +110,10 @@ const MyForm: React.FC = () => {
             { required: true, message: "Please enter your phone number" },
             { min: 8, message: "Your phone number is too Short!" },
             { max: 10, message: "Your phone number is too long!" },
+            // {
+            //   pattern: /^(\+|00)[1-9]{1}[0-9]{3,14}$/,
+            //   message: "Please enter a valid phone number.",
+            // },
           ]}
         >
           <Input
@@ -113,7 +137,7 @@ const MyForm: React.FC = () => {
             }
           />
         </Form.Item>
-        {/* <Form.Item
+        <Form.Item
           name="dates"
           label="Date Range"
           rules={[{ required: true, message: "Please select date range" }]}
@@ -122,11 +146,17 @@ const MyForm: React.FC = () => {
             onChange={handleRangePickerChange}
             disabledDate={disabledDate}
           />
-        </Form.Item> */}
+        </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit">
-            {LoginTrans.form.actions.submit[selectedLanguage]}
-          </Button>
+          {createFormMutation.isPending ? (
+            <Button type="primary" className="w-96">
+              Loading
+            </Button>
+          ) : (
+            <Button type="primary" htmlType="submit" className="w-96">
+              {LoginTrans.form.actions.submit[selectedLanguage]}
+            </Button>
+          )}
         </Form.Item>
       </Form>
     </div>
@@ -134,3 +164,6 @@ const MyForm: React.FC = () => {
 };
 
 export default MyForm;
+
+{
+}
